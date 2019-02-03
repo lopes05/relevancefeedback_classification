@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Image Recovery</title>
+
+        <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+  </head>
+
+  <body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+      <div class="container">
+        <a class="navbar-brand" href="/">Image Retrieval</a>
+      </div>
+    </nav>
+
+     <!-- Page Content -->
+     <div class="container">
+   
+        <div class="container-content"></div>
+        <div id="formbusca" class="row"> 
+          <div class="col-sm-4"><input id="imgurl" name="imgurl" type="file" accept="image/png, image/jpeg, image/jpg image/JPG"/>  </div>  
+          <div class="row">
+                  <button type="submit" value=Upload class="btn btn-primary" onclick="upload_file()">Enviar</button>
+          </div>
+        </div>
+        
+        <div id="imagem" class="row" style="width:100%;height:auto;display:none;">
+            <img id="blah" class="img-fluid" style="max-width: 100%;height: 400px;" src="#" alt="Objeto consulta" />
+        </div>
+  
+        <div id="imagens" style="display: none">
+          <h1 class="my-4 text-center">Resultados</h1>
+          <div class="row">
+            <button id="refilter" style="display:none" onclick="refilter()" type="submit" class="btn btn-primary"> Refazer busca</button>
+          </div>  
+          <div id="realimagens" class="row text-center text-lg-left">
+            
+          </div>
+        </div>
+      </div>
+
+  <script>
+    var dados;
+    function upload_file() 
+    {
+        let photo = document.getElementById("imgurl").files[0] // simlar to: document.getElementById("image-file").files[0] 
+
+        let formData = new FormData();
+        formData.append("imgurl", photo);  
+
+        let xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function(e) {
+            if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                console.log(xhr.responseType)
+                loadgallery(xhr);
+                var element = document.getElementById("footer");
+                element.classList.remove("position-fixed");
+                element.classList.add("position-relative");
+            } 
+            }
+        }
+        xhr.open("POST", 'http://0.0.0.0:3000/imagesearch', true); // or https://example.com/upload/image
+        xhr.send(formData);
+        
+    };
+
+
+
+    function loadgallery(json_data, first) {
+        
+        var arr = JSON.parse(json_data.response);
+        var teste = [];
+        str = "";
+        var x = 0;
+        for (ke in arr){
+            teste.push(arr[ke])
+            str = str + '<div class="col-lg-3 col-md-4 col-xs-6">'
+                + '<input id="' + arr[ke] + 'd" name="dados" type="checkbox"\> Relevante?'
+                + '<input id="' + arr[ke] + 'i" name="dados" type="checkbox"\> Irrelevante?'
+                + '<a href="#" class="d-block mb-4 h-100">' + 
+                '<img class="img-fluid img-thumbnail img-responsive" style="width:300px;height: 150px;" src="' + arr[ke] + '" alt="' + arr[ke] + '"\>'
+                + "<\a> </div>";
+        }
+        
+    
+        //append the markup to the DOM
+        let k = document.createRange().createContextualFragment(str);
+        dados = teste;
+        
+        document.getElementById("formbusca").style.display="none";
+        document.getElementById("imagens").style.display="block";
+        document.getElementById("refilter").style.display="block";
+        document.getElementById("realimagens").append(k);
+    };
+
+    function refilter() 
+    {   
+
+        imgs = [];
+        
+        for (d in dados){
+            el = document.getElementById(dados[d] + "d")
+            el2 = document.getElementById(dados[d] + "i")
+            var pacote = {'img': dados[d], 'relevant': el.checked, 'irrelevant': el2.checked };
+            imgs.push(pacote);
+        }
+        json = JSON.stringify(imgs);
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", 'http://0.0.0.0:3000/refilter', true);
+        xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
+        xhr.onreadystatechange = function(e) {
+            if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                console.log(xhr.responseType);
+                recreate();
+                loadgallery(xhr);
+            } 
+            }
+        }
+        xhr.send(json);
+        
+    };
+
+    function recreate()
+    {
+        var myNode = document.getElementById("realimagens");
+        while (myNode.firstChild) {
+            myNode.removeChild(myNode.firstChild);
+        }
+    }
+
+  </script>
+
+  </body>
+
+
+</html>
