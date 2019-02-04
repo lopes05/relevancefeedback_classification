@@ -36,6 +36,18 @@
         <div class="container-content"></div>
         <div id="formbusca" class="row"> 
           <div class="col-sm-4"><input id="imgurl" name="imgurl" type="file" accept="image/png, image/jpeg, image/jpg image/JPG"/>  </div>  
+            <select id="selectbox">
+                <option value="Horse">Cavalos</option>
+                <option value="Mountain">Montanhas</option>
+                <option value="Food">Comida</option>
+                <option value="Dinosaur">Dinossauros</option>
+                <option value="Elephant">Elefantes</option>
+                <option value="Flower">Flores</option>
+                <option value="Beach">Praia</option>
+                <option value="Building">Construções</option>
+                <option value="Buses">Onibus</option>
+                <option value="Africa">Africa</option>
+            </select> 
           <div class="row">
                   <button type="submit" value=Upload class="btn btn-primary" onclick="upload_file()">Enviar</button>
           </div>
@@ -115,10 +127,22 @@
     {   
 
         imgs = [];
-        
+        var sel = document.getElementById('selectbox');
+
+        // display value property of select list (from selected option)
+        console.log( sel.value );
+
         for (d in dados){
             el = document.getElementById(dados[d] + "d")
             el2 = document.getElementById(dados[d] + "i")
+            if(dados[d].includes(sel.value)){
+                el.checked = true;
+                el2.checked = false;
+            }
+            else{
+                el.checked = false;
+                el2.checked = true;
+            }
             var pacote = {'img': dados[d], 'relevant': el.checked, 'irrelevant': el2.checked };
             imgs.push(pacote);
         }

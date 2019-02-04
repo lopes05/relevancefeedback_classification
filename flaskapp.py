@@ -43,7 +43,7 @@ def search():
             image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
         global cbir
-        hists = cbir.ranking(f"{app.config['UPLOAD_FOLDER']}{filename}")[:20]
+        hists = cbir.ranking(f"{app.config['UPLOAD_FOLDER']}{filename}")[:40]
         hists = list(map(lambda k: k[1], hists))
         response = app.response_class(
             response=js.dumps(hists),

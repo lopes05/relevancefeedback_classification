@@ -107,6 +107,7 @@ class Extractor:
 
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.utils import shuffle
+from sklearn.neural_network import MLPClassifier
 
 class CBIR():
 
@@ -115,6 +116,7 @@ class CBIR():
         self.dict = {}
         self.dataset = []
         self.base_hists = []
+        self.query = []
         
 
         self.hists = self.read_hists()
@@ -153,11 +155,11 @@ class CBIR():
     def ranking(self, nome):
         
         img = cv2.imread(nome, 0)
-        hist_consulta = self.extractor.extrair_caracteristicas(img)
+        hist_consulta = self.normalize(self.extractor.extrair_caracteristicas(img))
+        self.query = hist_consulta
         d = []
 
         for i in self.hists:
-            hist_consulta = self.normalize(hist_consulta)
             hist_query = self.normalize(i[0])
             d.append((self.distancia(hist_consulta, hist_query), i[1], hist_query)) #Calcular distância entre os histogramas
 
@@ -170,26 +172,28 @@ class CBIR():
         tantofaz = [x for x in data if x not in useful_data and x not in irrelevant]
 
         for el in useful_data:
-            self.dataset.append((self.normalize(self.dict[el['img']]), 1, el['img']))
+            self.dataset.append((tuple(self.normalize(self.dict[el['img']])), 1, el['img']))
 
         for el in irrelevant:
-            self.dataset.append((self.normalize(self.dict[el['img']]), 0, el['img']))
+            self.dataset.append((tuple(self.normalize(self.dict[el['img']])), 0, el['img']))
 
-        self.dataset = shuffle(self.dataset)
-
+        self.dataset = list(set(self.dataset))
+        print(len(self.dataset))
+        #self.dataset = list(set(self.dataset))
         X = list(map(lambda k: k[0], self.dataset))
         Y = list(map(lambda k: k[1], self.dataset))
-        knn = KNeighborsClassifier(n_neighbors=3)
+        knn = KNeighborsClassifier()
         knn.fit(X, Y)
 
         x_geral = list(map(lambda k: k[0], self.base_hists))
         y_pred = knn.predict(x_geral)
-        
+
         retorno = []
+ 
         for i in range(len(y_pred)):
             if y_pred[i] == 1:
-                retorno.append(self.base_hists[i][1])
+                retorno.append((self.distancia(x_geral[i], self.query), self.base_hists[i][1]))
 
-        print(retorno)
+        #print(retorno)
 
-        return retorno
+        return list(map(lambda k: k[1], sorted(retorno)))
