@@ -167,7 +167,7 @@ class CBIR():
                 histogramas.append((l, 'corel1000/' + b))
                 l = self.normalize(l)
                 l = self.extractor.entropia(l)
-                self.base_hists.append((l, 'corel1000/' + b))
+                self.base_hists.append((tuple(l), 'corel1000/' + b))
 
             for hist in histogramas:
                 self.dict[hist[1]] = self.dict.get(hist[1], hist[0])
@@ -199,11 +199,10 @@ class CBIR():
         e = sorted(d)
         return e
 
-    def calc_precision(self):
+    def calc_precision(self, actualset):
         tp = 0
         fp = 0
-        for value in self.dataset:
-            print(value)
+        for value in actualset:
             if self.classname in value[2] and value[1] == 1:
                 tp += 1
             elif self.classname not in value[2] and value[1] == 1:
@@ -211,34 +210,35 @@ class CBIR():
 
         print(tp, fp)
         prec = tp / (tp + fp)
+        print(prec)
         self.precision.append(prec)
 
-    def calc_recall(self):
+    def calc_recall(self, actualset, fn):
         tp = 0
-        fn = 0
-        for value in self.dataset:
-            if self.classname in value[2] and value[1] == 0:
-                fn += 1
-            elif self.classname in value[2] and value[1] == 1:
+        for value in actualset:
+            if self.classname in value[2] and value[1] == 1:
                 tp += 1
-
-        prec = tp / (tp + fn)
-        self.recall.append(prec)
+        print(tp, fn)
+        recall = tp / (tp + fn)
+        print(recall)
+        self.recall.append(recall)
 
     def refilter(self, data):
         useful_data = [x for x in data if x['relevant']] # apenas os marcados como relevantes
         irrelevant = [x for x in data if x['irrelevant']]
         tantofaz = [x for x in data if x not in useful_data and x not in irrelevant]
-
+        actualset = []
         for el in useful_data:
             a = self.normalize(self.dict[el['img']])
             a = self.extractor.entropia(a)
             self.dataset.append((tuple(a), 1, el['img']))
+            actualset.append((tuple(a), 1, el['img']))
 
         for el in irrelevant:
             b = self.normalize(self.dict[el['img']])
             b = self.extractor.entropia(b)
             self.dataset.append((tuple(b), 0, el['img']))
+            actualset.append((tuple(a), 1, el['img']))
 
         self.dataset = list(set(self.dataset))
         print(len(self.dataset))
@@ -248,8 +248,8 @@ class CBIR():
         knn = KNeighborsClassifier()
         knn.fit(X, Y)
 
-        x_geral = list(map(lambda k: k[0], self.base_hists))
-        z_geral = list(map(lambda k: k[1], self.base_hists))
+        x_geral = list(map(lambda k: k[0], list(set(self.base_hists))))
+        z_geral = list(map(lambda k: k[1], list(set(self.base_hists))))
         y_pred = knn.predict(x_geral)
 
         retorno = []
@@ -257,22 +257,27 @@ class CBIR():
         fn = 0
         fp = 0
         tp = 0
+        listnomes = list(set(list(map(lambda x : x[2], actualset))))
         for i in range(len(y_pred)):
             if y_pred[i] == 1:
                 retorno.append((self.distancia(x_geral[i], self.query), z_geral[i]))
             
-            if y_pred[i] == 0 and self.classname in z_geral[i]:
-                fn += 1
-            elif y_pred[i] == 1 and self.classname not in z_geral[i]:
+            if y_pred[i] == 1 and self.classname not in z_geral[i]:
                 fp += 1
             elif y_pred[i] == 1 and self.classname in z_geral[i]:
                 tp += 1
+            
+            if self.classname in z_geral[i] and z_geral[i] not in listnomes:
+                print(z_geral[i])
+                fn += 1
 
-        self.precision.append((tp / (tp + fp)))
-        self.recall.append((tp / (tp + fn)))
+        print(len(actualset))
+        self.calc_precision(actualset)
+        self.calc_recall(actualset, fn)
+        #self.precision.append((tp / (tp + fp)))
+        #self.recall.append((tp / (tp + fn)))
         #print(retorno)
 
-        print(self.recall, self.precision)
+        print(self.precision, self.recall)
         retorno = list(map(lambda k: k[1], sorted(retorno)))
-        print(retorno)
         return retorno
