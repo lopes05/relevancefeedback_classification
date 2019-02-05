@@ -156,7 +156,7 @@ class CBIR():
     def read_hists(self):
         histogramas = []
         
-        with open('hists.db') as f:
+        with open('histsentropia.db') as f:
             for line in f:
                 a,b = line.split(',')
                 l = a.split()
@@ -165,8 +165,8 @@ class CBIR():
                 #histogramas[b.strip()] = histogramas.get(b.strip(), l)
                 b= b.strip()
                 histogramas.append((l, 'corel1000/' + b))
-                l = self.normalize(l)
-                l = self.extractor.entropia(l)
+                #l = self.normalize(l)
+                #l = self.extractor.entropia(l)
                 self.base_hists.append((tuple(l), 'corel1000/' + b))
 
             for hist in histogramas:
@@ -190,11 +190,13 @@ class CBIR():
             hist_consulta = self.extractor.entropia(hist_consulta)
         
         self.query = hist_consulta
+        
         d = []
         for i in self.hists:
-            hist_query = self.normalize(i[0])
-            hist_query = self.extractor.entropia(hist_query)
-            d.append((self.distancia(hist_consulta, hist_query), i[1], hist_query)) #Calcular distância entre os histogramas
+            #hist_query = self.normalize(i[0])
+            #hist_query = self.extractor.entropia(hist_query)
+            #print(hist_query)
+            d.append((self.distancia(hist_consulta, i[0]), i[1], i[0])) #Calcular distância entre os histogramas
 
         e = sorted(d)
         return e
@@ -229,16 +231,16 @@ class CBIR():
         tantofaz = [x for x in data if x not in useful_data and x not in irrelevant]
         actualset = []
         for el in useful_data:
-            a = self.normalize(self.dict[el['img']])
-            a = self.extractor.entropia(a)
+            a = self.dict[el['img']]
+            #a = self.extractor.entropia(a)
             self.dataset.append((tuple(a), 1, el['img']))
             actualset.append((tuple(a), 1, el['img']))
 
         for el in irrelevant:
-            b = self.normalize(self.dict[el['img']])
-            b = self.extractor.entropia(b)
+            b = self.dict[el['img']]
+            #b = self.extractor.entropia(b)
             self.dataset.append((tuple(b), 0, el['img']))
-            actualset.append((tuple(a), 1, el['img']))
+            actualset.append((tuple(b), 1, el['img']))
 
         self.dataset = list(set(self.dataset))
         print(len(self.dataset))
@@ -258,8 +260,11 @@ class CBIR():
         fp = 0
         tp = 0
         listnomes = list(set(list(map(lambda x : x[2], actualset))))
+        #img_query = self.normalize(self.query)
+        #img_query = self.extractor.entropia(img_query)
         for i in range(len(y_pred)):
             if y_pred[i] == 1:
+                
                 retorno.append((self.distancia(x_geral[i], self.query), z_geral[i]))
             
             if y_pred[i] == 1 and self.classname not in z_geral[i]:
