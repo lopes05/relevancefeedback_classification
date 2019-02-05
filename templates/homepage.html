@@ -146,6 +146,7 @@
             var pacote = {'img': dados[d], 'relevant': el.checked, 'irrelevant': el2.checked };
             imgs.push(pacote);
         }
+        imgs.push({'val': sel.value});
         json = JSON.stringify(imgs);
         let xhr = new XMLHttpRequest();
         xhr.open("POST", 'http://0.0.0.0:3000/refilter', true);

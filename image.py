@@ -104,6 +104,24 @@ class Extractor:
         hist_sobel = self.calcular_histograma(img_sobel)
         return np.append(hist_lbp, hist_sobel) #Concatenar os dois histogramas
 
+    def entropia(self, vetor512):
+        """
+            Redução do numero de características do vetor de 512 para 64.
+            Vetor precisa está normalizado antes da operação
+        """
+        new_vet = []
+        cont = 1
+        for i in range(0, len(vetor512), 8):
+            values = vetor512[i:8*cont]
+            cont += 1
+            entropy = 0
+            for j in values:
+                if not j:
+                    continue
+                entropy += j * np.log2(j)
+            entropy = -entropy
+            new_vet.append(entropy)
+        return new_vet
 
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.utils import shuffle
@@ -117,9 +135,12 @@ class CBIR():
         self.dataset = []
         self.base_hists = []
         self.query = []
-        
+        self.classname = ''
+        self.precision = []
+        self.recall = []
 
         self.hists = self.read_hists()
+        #self.save_entropia()
 
     def distancia(self, a, b):
         M = len(a)
@@ -144,27 +165,65 @@ class CBIR():
                 #histogramas[b.strip()] = histogramas.get(b.strip(), l)
                 b= b.strip()
                 histogramas.append((l, 'corel1000/' + b))
-                self.base_hists.append((self.normalize(l), 'corel1000/' + b))
+                l = self.normalize(l)
+                l = self.extractor.entropia(l)
+                self.base_hists.append((l, 'corel1000/' + b))
 
             for hist in histogramas:
                 self.dict[hist[1]] = self.dict.get(hist[1], hist[0])
 
         return histogramas
 
+    def save_entropia(self):
+        with open('histsentropia.db', 'w') as f:
+            for i in self.base_hists:
+                nome = i[1].split('/')[1]
+                str_carac = " ".join(str(x) for x in i[0])
+                f.write("%s, %s\n" % (str_carac, nome))
+
     #Procurar imagem semelhante na base
     def ranking(self, nome):
         
         img = cv2.imread(nome, 0)
         hist_consulta = self.normalize(self.extractor.extrair_caracteristicas(img))
+        if len(hist_consulta) > 64:
+            hist_consulta = self.extractor.entropia(hist_consulta)
+        
         self.query = hist_consulta
         d = []
-
         for i in self.hists:
             hist_query = self.normalize(i[0])
+            hist_query = self.extractor.entropia(hist_query)
             d.append((self.distancia(hist_consulta, hist_query), i[1], hist_query)) #Calcular distância entre os histogramas
 
         e = sorted(d)
         return e
+
+    def calc_precision(self):
+        tp = 0
+        fp = 0
+        for value in self.dataset:
+            print(value)
+            if self.classname in value[2] and value[1] == 1:
+                tp += 1
+            elif self.classname not in value[2] and value[1] == 1:
+                fp += 1
+
+        print(tp, fp)
+        prec = tp / (tp + fp)
+        self.precision.append(prec)
+
+    def calc_recall(self):
+        tp = 0
+        fn = 0
+        for value in self.dataset:
+            if self.classname in value[2] and value[1] == 0:
+                fn += 1
+            elif self.classname in value[2] and value[1] == 1:
+                tp += 1
+
+        prec = tp / (tp + fn)
+        self.recall.append(prec)
 
     def refilter(self, data):
         useful_data = [x for x in data if x['relevant']] # apenas os marcados como relevantes
@@ -172,10 +231,14 @@ class CBIR():
         tantofaz = [x for x in data if x not in useful_data and x not in irrelevant]
 
         for el in useful_data:
-            self.dataset.append((tuple(self.normalize(self.dict[el['img']])), 1, el['img']))
+            a = self.normalize(self.dict[el['img']])
+            a = self.extractor.entropia(a)
+            self.dataset.append((tuple(a), 1, el['img']))
 
         for el in irrelevant:
-            self.dataset.append((tuple(self.normalize(self.dict[el['img']])), 0, el['img']))
+            b = self.normalize(self.dict[el['img']])
+            b = self.extractor.entropia(b)
+            self.dataset.append((tuple(b), 0, el['img']))
 
         self.dataset = list(set(self.dataset))
         print(len(self.dataset))
@@ -186,14 +249,30 @@ class CBIR():
         knn.fit(X, Y)
 
         x_geral = list(map(lambda k: k[0], self.base_hists))
+        z_geral = list(map(lambda k: k[1], self.base_hists))
         y_pred = knn.predict(x_geral)
 
         retorno = []
- 
+
+        fn = 0
+        fp = 0
+        tp = 0
         for i in range(len(y_pred)):
             if y_pred[i] == 1:
-                retorno.append((self.distancia(x_geral[i], self.query), self.base_hists[i][1]))
+                retorno.append((self.distancia(x_geral[i], self.query), z_geral[i]))
+            
+            if y_pred[i] == 0 and self.classname in z_geral[i]:
+                fn += 1
+            elif y_pred[i] == 1 and self.classname not in z_geral[i]:
+                fp += 1
+            elif y_pred[i] == 1 and self.classname in z_geral[i]:
+                tp += 1
 
+        self.precision.append((tp / (tp + fp)))
+        self.recall.append((tp / (tp + fn)))
         #print(retorno)
 
-        return list(map(lambda k: k[1], sorted(retorno)))
+        print(self.recall, self.precision)
+        retorno = list(map(lambda k: k[1], sorted(retorno)))
+        print(retorno)
+        return retorno

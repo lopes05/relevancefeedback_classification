@@ -32,7 +32,7 @@ def hello():
     return render_template('homepage.html')
 
 import json as js
-
+import traceback
 @app.route("/imagesearch", methods=['POST'])
 def search():
     try:
@@ -54,11 +54,14 @@ def search():
 
 
     except Exception as e:
+        traceback.print_exc()
         response = app.response_class(
             response=str(e),
             status=400
         )
         return response
+
+
 
 @app.route('/refilter', methods=['POST'])
 def refilter():
@@ -66,6 +69,8 @@ def refilter():
     try:
         global cbir
         dados = request.get_json()
+        cbir.classname = dados.pop()['val']
+        print(cbir.classname)
         hists = cbir.refilter(dados)
 
         response = app.response_class(
@@ -75,6 +80,7 @@ def refilter():
         )
         return response
     except Exception as e:
+        traceback.print_exc()
         response = app.response_class(
             response=str(e),
             status=400
