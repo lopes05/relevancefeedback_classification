@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import os
 
 
+
 class Extractor:
 
     def conv(self, img, kernel):
@@ -200,6 +201,26 @@ class CBIR():
 
         e = sorted(d)
         return e
+
+        """
+    algoritmo:após o calculo e ordenação das distancias da primeira consulta, 
+    tu vai pegar e fazer bem assim, vai ter la d1,d2,d3,...,
+    dn dai tu fixa d1 e d2 na lista de retorno, com isso vc vai ter um pivor 
+    d2 que vai ser utilizado da seguinte forma --> se Di - pivor < pivor - d[pivor-1] 
+    vc nao adiciona esse na lista, mas se for maior vc adicionna Di na lista e o pivor 
+    passa a ser Di
+    """
+    def diversity_query(self, distancias):
+        novas_distancias = [distancias[0], distancias[1]]
+        pivor = distancias[1]
+        index_pivor = 1
+        for i in range(2,len(distancias)):
+            if (distancias[i][0] - pivor[0] > pivor[0] - distancias[index_pivor-1][0]):
+                novas_distancias.append(distancias[i])
+                pivor =  distancias[i]
+                index_pivor = i
+        
+        return novas_distancias
 
     def calc_precision(self, actualset):
         tp = 0
