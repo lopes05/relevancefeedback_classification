@@ -220,7 +220,6 @@ class CBIR():
                 novas_distancias.append(distancias[i])
                 pivor =  distancias[i]
                 index_pivor = i
-
         return novas_distancias
 
     def calc_precision(self, actualset):
