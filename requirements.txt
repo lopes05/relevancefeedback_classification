@@ -4,7 +4,7 @@ Click==7.0
 cycler==0.10.0
 fanstatic==1.1
 Flask==1.0.2
-Flask-Cors==3.0.7
+Flask-Cors==3.0.9
 idna==2.8
 itsdangerous==1.1.0
 Jinja2==2.10
